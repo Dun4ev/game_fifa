@@ -1,0 +1,1544 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sakura Brick 11v11 Football</title>
+  <link rel="icon" href="data:,">
+  <style>
+    :root {
+      --home: #2f7df6;
+      --away: #f04c45;
+      --accent: #f3c944;
+      --glass: rgba(13, 18, 29, 0.66);
+      --line: rgba(255, 255, 255, 0.18);
+      --text: #f7fbff;
+      --muted: rgba(247, 251, 255, 0.72);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #101722;
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    #game {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    .hud {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      padding: 18px;
+      gap: 14px;
+    }
+
+    .topbar {
+      display: grid;
+      grid-template-columns: minmax(160px, 1fr) auto minmax(160px, 1fr);
+      align-items: start;
+      gap: 12px;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      background: var(--glass);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      box-shadow: 0 18px 50px rgba(0, 0, 0, 0.24);
+    }
+
+    .score {
+      border-radius: 8px;
+      padding: 10px 14px;
+      min-width: 310px;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .team {
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 800;
+      letter-spacing: 0;
+      text-transform: uppercase;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .team:last-child {
+      justify-content: flex-end;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex: 0 0 auto;
+      box-shadow: 0 0 16px currentColor;
+    }
+
+    .dot.home {
+      color: var(--home);
+      background: var(--home);
+    }
+
+    .dot.away {
+      color: var(--away);
+      background: var(--away);
+    }
+
+    .scoreline {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 24px;
+      font-weight: 900;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .timer {
+      grid-column: 2;
+      justify-self: center;
+      border-radius: 8px;
+      padding: 8px 12px;
+      min-width: 84px;
+      text-align: center;
+      font-weight: 850;
+      font-size: 18px;
+      font-variant-numeric: tabular-nums;
+      color: #fff9d7;
+    }
+
+    .status {
+      justify-self: start;
+      border-radius: 8px;
+      padding: 10px 12px;
+      max-width: 300px;
+      font-size: 13px;
+      line-height: 1.35;
+      color: var(--muted);
+    }
+
+    .status strong {
+      color: var(--text);
+      display: block;
+      font-size: 13px;
+      margin-bottom: 3px;
+    }
+
+    .controls {
+      justify-self: end;
+      border-radius: 8px;
+      padding: 10px 12px;
+      display: grid;
+      gap: 5px;
+      max-width: 330px;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.25;
+    }
+
+    .controls b {
+      color: #ffffff;
+      font-weight: 800;
+    }
+
+    .bottom {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: end;
+      gap: 14px;
+    }
+
+    .meter-panel {
+      grid-column: 2;
+      justify-self: center;
+      border-radius: 8px;
+      padding: 10px 12px 12px;
+      width: min(420px, 56vw);
+      opacity: 0.98;
+    }
+
+    .meter-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .meter {
+      height: 12px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+    }
+
+    .meter-fill {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, #76d7ff, var(--accent), #ff5f6f);
+      border-radius: inherit;
+      transition: width 80ms linear;
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      top: 48%;
+      transform: translate(-50%, -50%) scale(0.86);
+      border-radius: 8px;
+      padding: 18px 30px;
+      min-width: 260px;
+      text-align: center;
+      pointer-events: none;
+      opacity: 0;
+      background: rgba(11, 16, 24, 0.78);
+      border: 1px solid rgba(243, 201, 68, 0.55);
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.38), 0 0 40px rgba(243, 201, 68, 0.18);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      color: #fff7c7;
+      font-size: 30px;
+      font-weight: 950;
+      letter-spacing: 0;
+      text-transform: uppercase;
+    }
+
+    .toast.show {
+      animation: goalToast 1.55s cubic-bezier(.2, .9, .2, 1) forwards;
+    }
+
+    @keyframes goalToast {
+      0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.76);
+      }
+      18% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1.04);
+      }
+      72% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+      }
+      100% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.94);
+      }
+    }
+
+    .mobile-hint {
+      display: none;
+    }
+
+    @media (max-width: 760px) {
+      .hud {
+        padding: 10px;
+      }
+
+      .topbar {
+        grid-template-columns: 1fr;
+      }
+
+      .score,
+      .timer,
+      .status,
+      .controls {
+        justify-self: stretch;
+        max-width: none;
+      }
+
+      .timer {
+        grid-column: auto;
+      }
+
+      .controls {
+        display: none;
+      }
+
+      .score {
+        min-width: 0;
+      }
+
+      .scoreline {
+        font-size: 20px;
+      }
+
+      .bottom {
+        grid-template-columns: 1fr;
+      }
+
+      .meter-panel {
+        grid-column: auto;
+        width: 100%;
+      }
+
+      .mobile-hint {
+        display: inline;
+      }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="game" aria-label="Sakura Brick 11v11 Football"></canvas>
+  <div class="hud">
+    <div class="topbar">
+      <div class="status panel">
+        <strong id="phase">Kickoff</strong>
+        <span id="playerStatus">Selected: Home 10</span>
+      </div>
+      <div>
+        <div class="score panel">
+          <div class="team"><span class="dot home"></span><span>Home</span></div>
+          <div class="scoreline"><span id="homeScore">0</span><span>-</span><span id="awayScore">0</span></div>
+          <div class="team"><span>Away</span><span class="dot away"></span></div>
+        </div>
+        <div id="timer" class="timer panel">03:00</div>
+      </div>
+      <div class="controls panel">
+        <div><b>WASD</b> move · <b>Shift</b> sprint · <b>Q</b> switch · <b>P</b> pause · <b>R</b> kickoff</div>
+        <div><b>J</b> pass · <b>K</b> through ball · <b>Space</b> charged shot</div>
+        <div><b>Controller</b> LS move · RT sprint · A switch · Y pass · B through · LB shoot</div>
+      </div>
+    </div>
+    <div></div>
+    <div class="bottom">
+      <div></div>
+      <div class="meter-panel panel">
+        <div class="meter-label">
+          <span>Shot power</span>
+          <span id="powerText">0%</span>
+        </div>
+        <div class="meter"><div id="powerFill" class="meter-fill"></div></div>
+      </div>
+      <div></div>
+    </div>
+  </div>
+  <div id="toast" class="toast">Goal</div>
+
+  <script type="module">
+    import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
+
+    const CONFIG = {
+      pitchLength: 110,
+      pitchWidth: 68,
+      penaltyDepth: 16.5,
+      penaltyWidth: 40,
+      goalWidth: 14,
+      goalDepth: 4.5,
+      playerRadius: 1.05,
+      matchSeconds: 180,
+      normalSpeed: 12.6,
+      sprintSpeed: 18.2,
+      aiSpeed: 10.5,
+      ballFriction: 0.985,
+      ballStop: 0.04,
+      passPower: 28,
+      throughPower: 39,
+      shotMin: 34,
+      shotMax: 68,
+      tackleDistance: 3.25,
+      tackleCooldown: 0.55
+    };
+
+    const COLORS = {
+      home: 0x2f7df6,
+      away: 0xf04c45,
+      keeper: 0xf3c944,
+      grassA: 0x2f8751,
+      grassB: 0x2a7d49,
+      white: 0xf4fbff,
+      sakura: 0xffb7d5,
+      darkWood: 0x6b2431,
+      water: 0x4fb9cf,
+      stone: 0x9ca3af
+    };
+
+    const dom = {
+      canvas: document.getElementById('game'),
+      phase: document.getElementById('phase'),
+      playerStatus: document.getElementById('playerStatus'),
+      homeScore: document.getElementById('homeScore'),
+      awayScore: document.getElementById('awayScore'),
+      timer: document.getElementById('timer'),
+      powerFill: document.getElementById('powerFill'),
+      powerText: document.getElementById('powerText'),
+      toast: document.getElementById('toast')
+    };
+
+    const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+    const lerp = (a, b, t) => a + (b - a) * t;
+    const rnd = (min, max) => min + Math.random() * (max - min);
+
+    function flatDistance(a, b) {
+      const dx = a.x - b.x;
+      const dz = a.z - b.z;
+      return Math.hypot(dx, dz);
+    }
+
+    function flatDirection(from, to) {
+      const x = to.x - from.x;
+      const z = to.z - from.z;
+      const len = Math.hypot(x, z) || 1;
+      return new THREE.Vector3(x / len, 0, z / len);
+    }
+
+    function formatTime(seconds) {
+      const s = Math.max(0, Math.ceil(seconds));
+      const m = Math.floor(s / 60).toString().padStart(2, '0');
+      const r = (s % 60).toString().padStart(2, '0');
+      return `${m}:${r}`;
+    }
+
+    class Input {
+      constructor() {
+        this.keys = new Set();
+        this.prevKeys = new Set();
+        this.pendingActions = new Set();
+        this.gamepadPrev = new Set();
+        this.move = new THREE.Vector2();
+        this.sprint = false;
+        this.actions = {
+          pass: false,
+          through: false,
+          shootDown: false,
+          shootUp: false,
+          switch: false,
+          pause: false,
+          restart: false
+        };
+        this.shootHeld = false;
+        window.addEventListener('keydown', event => {
+          if (['Space', 'ShiftLeft', 'ShiftRight'].includes(event.code)) event.preventDefault();
+          if (!event.repeat) this.queueKeyboardAction(event.code, true);
+          this.keys.add(event.code);
+        });
+        window.addEventListener('keyup', event => {
+          if (['Space', 'ShiftLeft', 'ShiftRight'].includes(event.code)) event.preventDefault();
+          this.queueKeyboardAction(event.code, false);
+          this.keys.delete(event.code);
+        });
+      }
+
+      beginFrame() {
+        const gp = navigator.getGamepads ? navigator.getGamepads()[0] : null;
+        const gpPressed = new Set();
+        this.actions.pass = this.pendingActions.has('pass') || this.justPressed('KeyJ');
+        this.actions.through = this.pendingActions.has('through') || this.justPressed('KeyK');
+        this.actions.switch = this.pendingActions.has('switch') || this.justPressed('KeyQ');
+        this.actions.pause = this.pendingActions.has('pause') || this.justPressed('KeyP');
+        this.actions.restart = this.pendingActions.has('restart') || this.justPressed('KeyR');
+        this.actions.shootDown = this.pendingActions.has('shootDown') || this.justPressed('Space');
+        this.actions.shootUp = this.pendingActions.has('shootUp') || this.justReleased('Space');
+
+        let x = 0;
+        let y = 0;
+        if (this.keys.has('KeyA')) x -= 1;
+        if (this.keys.has('KeyD')) x += 1;
+        if (this.keys.has('KeyW')) y += 1;
+        if (this.keys.has('KeyS')) y -= 1;
+
+        this.sprint = this.keys.has('ShiftLeft') || this.keys.has('ShiftRight');
+
+        if (gp) {
+          const axX = Math.abs(gp.axes[0]) > 0.12 ? gp.axes[0] : 0;
+          const axY = Math.abs(gp.axes[1]) > 0.12 ? -gp.axes[1] : 0;
+          if (Math.hypot(axX, axY) > 0.1) {
+            x = axX;
+            y = axY;
+          }
+          this.sprint = this.sprint || (gp.buttons[7] && gp.buttons[7].value > 0.35);
+          this.addGamepadAction(gp, gpPressed, 0, 'switch');
+          this.addGamepadAction(gp, gpPressed, 3, 'pass');
+          this.addGamepadAction(gp, gpPressed, 1, 'through');
+          this.addGamepadAction(gp, gpPressed, 4, 'shootDown');
+          if (!gp.buttons[4]?.pressed && this.gamepadPrev.has(4)) this.actions.shootUp = true;
+        }
+
+        this.move.set(x, y);
+        if (this.move.length() > 1) this.move.normalize();
+
+        this.shootHeld = this.keys.has('Space') || !!gp?.buttons[4]?.pressed;
+        this.gamepadPrev = gpPressed;
+      }
+
+      endFrame() {
+        this.prevKeys = new Set(this.keys);
+        this.pendingActions.clear();
+      }
+
+      queueKeyboardAction(code, down) {
+        if (down && code === 'KeyJ') this.pendingActions.add('pass');
+        if (down && code === 'KeyK') this.pendingActions.add('through');
+        if (down && code === 'KeyQ') this.pendingActions.add('switch');
+        if (down && code === 'KeyP') this.pendingActions.add('pause');
+        if (down && code === 'KeyR') this.pendingActions.add('restart');
+        if (down && code === 'Space') this.pendingActions.add('shootDown');
+        if (!down && code === 'Space') this.pendingActions.add('shootUp');
+      }
+
+      justPressed(code) {
+        return this.keys.has(code) && !this.prevKeys.has(code);
+      }
+
+      justReleased(code) {
+        return !this.keys.has(code) && this.prevKeys.has(code);
+      }
+
+      addGamepadAction(gp, pressedSet, button, action) {
+        if (gp.buttons[button]?.pressed) {
+          pressedSet.add(button);
+          if (!this.gamepadPrev.has(button)) this.actions[action] = true;
+        }
+      }
+    }
+
+    class Ball {
+      constructor(scene) {
+        const ballGeo = new THREE.SphereGeometry(0.55, 24, 16);
+        const ballMat = new THREE.MeshStandardMaterial({
+          color: 0xf8fafc,
+          roughness: 0.52,
+          metalness: 0.02
+        });
+        this.mesh = new THREE.Mesh(ballGeo, ballMat);
+        this.mesh.castShadow = true;
+        this.mesh.position.set(0, 0.58, 0);
+        this.velocity = new THREE.Vector3();
+        this.owner = null;
+        this.lastKicker = null;
+        this.intendedReceiver = null;
+        this.pickupCooldown = 0;
+        scene.add(this.mesh);
+
+        const seamMat = new THREE.MeshBasicMaterial({ color: 0x111827, transparent: true, opacity: 0.55 });
+        const seam = new THREE.TorusGeometry(0.56, 0.012, 6, 48);
+        this.rings = [];
+        for (let i = 0; i < 3; i++) {
+          const ring = new THREE.Mesh(seam, seamMat);
+          ring.rotation.set(i === 0 ? Math.PI / 2 : 0, i === 1 ? Math.PI / 2 : 0, i === 2 ? Math.PI / 2 : 0);
+          this.mesh.add(ring);
+          this.rings.push(ring);
+        }
+      }
+
+      reset(position = new THREE.Vector3(0, 0.58, 0)) {
+        this.owner = null;
+        this.lastKicker = null;
+        this.intendedReceiver = null;
+        this.pickupCooldown = 0;
+        this.velocity.set(0, 0, 0);
+        this.mesh.position.copy(position);
+      }
+
+      kick(direction, power, lift = 0, kicker = null, pickupCooldown = 0.22, intendedReceiver = null) {
+        this.owner = null;
+        this.lastKicker = kicker;
+        this.intendedReceiver = intendedReceiver;
+        this.pickupCooldown = pickupCooldown;
+        this.velocity.copy(direction).multiplyScalar(power);
+        this.velocity.y = lift;
+      }
+
+      update(delta) {
+        this.pickupCooldown = Math.max(0, this.pickupCooldown - delta);
+
+        if (this.owner) {
+          const dir = this.owner.forward.clone();
+          const offset = dir.multiplyScalar(1.45);
+          const target = this.owner.mesh.position.clone().add(offset);
+          target.y = 0.58;
+          this.mesh.position.lerp(target, clamp(delta * 18, 0, 1));
+          this.velocity.set(0, 0, 0);
+          return;
+        }
+
+        this.mesh.position.addScaledVector(this.velocity, delta);
+        this.velocity.x *= Math.pow(CONFIG.ballFriction, delta * 60);
+        this.velocity.z *= Math.pow(CONFIG.ballFriction, delta * 60);
+        this.velocity.y -= 18 * delta;
+        this.mesh.position.y += this.velocity.y * delta;
+
+        if (this.mesh.position.y < 0.58) {
+          this.mesh.position.y = 0.58;
+          this.velocity.y *= -0.32;
+          if (Math.abs(this.velocity.y) < 0.3) this.velocity.y = 0;
+        }
+
+        const flatSpeed = Math.hypot(this.velocity.x, this.velocity.z);
+        if (flatSpeed < CONFIG.ballStop) {
+          this.velocity.x = 0;
+          this.velocity.z = 0;
+        }
+
+        this.mesh.rotation.x += this.velocity.z * delta * 1.35;
+        this.mesh.rotation.z -= this.velocity.x * delta * 1.35;
+      }
+    }
+
+    class Player {
+      constructor(scene, team, number, role, x, z) {
+        this.team = team;
+        this.number = number;
+        this.role = role;
+        this.home = team === 'home';
+        this.base = new THREE.Vector3(x, 0, z);
+        this.target = this.base.clone();
+        this.velocity = new THREE.Vector3();
+        this.forward = new THREE.Vector3(0, 0, this.home ? -1 : 1);
+        this.controlled = false;
+        this.hasBall = false;
+        this.stamina = 1;
+        this.cooldown = rnd(0, 0.5);
+        this.tackleCooldown = rnd(0, 0.35);
+        this.mesh = this.makeMesh();
+        this.mesh.position.set(x, 0, z);
+        scene.add(this.mesh);
+      }
+
+      makeMesh() {
+        const group = new THREE.Group();
+        const kitColor = this.role === 'GK' ? COLORS.keeper : (this.home ? COLORS.home : COLORS.away);
+        const skin = new THREE.MeshStandardMaterial({ color: 0xffd4a3, roughness: 0.58 });
+        const kit = new THREE.MeshStandardMaterial({ color: kitColor, roughness: 0.5, metalness: 0.03 });
+        const shorts = new THREE.MeshStandardMaterial({ color: this.home ? 0x143a8a : 0x8a1717, roughness: 0.54 });
+        const boot = new THREE.MeshStandardMaterial({ color: 0x151923, roughness: 0.45 });
+        const outline = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.0 });
+
+        const body = new THREE.Mesh(new THREE.BoxGeometry(1.3, 1.9, 0.9), kit);
+        body.position.y = 2.0;
+        body.castShadow = true;
+        group.add(body);
+
+        const head = new THREE.Mesh(new THREE.SphereGeometry(0.46, 18, 14), skin);
+        head.position.y = 3.25;
+        head.castShadow = true;
+        group.add(head);
+
+        const hair = new THREE.Mesh(new THREE.BoxGeometry(0.78, 0.25, 0.64), new THREE.MeshStandardMaterial({ color: 0x20232a, roughness: 0.7 }));
+        hair.position.y = 3.62;
+        hair.castShadow = true;
+        group.add(hair);
+
+        const leftLeg = new THREE.Mesh(new THREE.BoxGeometry(0.42, 1.05, 0.44), shorts);
+        leftLeg.position.set(-0.32, 0.82, 0);
+        leftLeg.castShadow = true;
+        group.add(leftLeg);
+
+        const rightLeg = leftLeg.clone();
+        rightLeg.position.x = 0.32;
+        group.add(rightLeg);
+
+        const leftBoot = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.22, 0.76), boot);
+        leftBoot.position.set(-0.32, 0.2, -0.1);
+        leftBoot.castShadow = true;
+        group.add(leftBoot);
+
+        const rightBoot = leftBoot.clone();
+        rightBoot.position.x = 0.32;
+        group.add(rightBoot);
+
+        const mark = new THREE.Mesh(new THREE.RingGeometry(CONFIG.playerRadius * 1.05, CONFIG.playerRadius * 1.25, 32), outline);
+        mark.rotation.x = -Math.PI / 2;
+        mark.position.y = 0.035;
+        group.add(mark);
+        this.selectionRing = mark;
+
+        return group;
+      }
+
+      setControlled(value) {
+        this.controlled = value;
+        this.selectionRing.material.opacity = value ? 0.82 : 0;
+        this.selectionRing.material.color.set(value ? 0xf3c944 : 0xffffff);
+      }
+
+      setHasBall(value) {
+        this.hasBall = value;
+      }
+
+      moveTowards(target, speed, delta, intensity = 1, stopDistance = 0.05) {
+        const dir = flatDirection(this.mesh.position, target);
+        const dist = flatDistance(this.mesh.position, target);
+        const step = Math.min(Math.max(0, dist - stopDistance), speed * intensity * delta);
+        if (dist > stopDistance) {
+          this.mesh.position.x += dir.x * step;
+          this.mesh.position.z += dir.z * step;
+          this.forward.copy(dir);
+        }
+        this.clampToPitch();
+      }
+
+      applyManual(input, delta) {
+        if (input.move.lengthSq() < 0.001) return;
+        const speed = input.sprint ? CONFIG.sprintSpeed : CONFIG.normalSpeed;
+        const dir = new THREE.Vector3(input.move.x, 0, -input.move.y);
+        this.mesh.position.addScaledVector(dir, speed * delta);
+        this.forward.copy(dir.normalize());
+        this.clampToPitch();
+      }
+
+      clampToPitch() {
+        this.mesh.position.x = clamp(this.mesh.position.x, -CONFIG.pitchWidth / 2 + 1, CONFIG.pitchWidth / 2 - 1);
+        this.mesh.position.z = clamp(this.mesh.position.z, -CONFIG.pitchLength / 2 + 1, CONFIG.pitchLength / 2 - 1);
+      }
+
+      updateAnimation(time) {
+        const bob = Math.sin(time * 8 + this.number) * 0.045;
+        this.mesh.children[0].position.y = 2.0 + bob;
+        const angle = Math.atan2(this.forward.x, this.forward.z);
+        this.mesh.rotation.y = angle;
+      }
+    }
+
+    class Pitch {
+      constructor(scene) {
+        this.scene = scene;
+        this.group = new THREE.Group();
+        scene.add(this.group);
+        this.createGrass();
+        this.createLines();
+        this.createGoals();
+        this.createSurroundings();
+      }
+
+      createGrass() {
+        const bandLength = CONFIG.pitchLength / 12;
+        for (let i = 0; i < 12; i++) {
+          const geo = new THREE.PlaneGeometry(CONFIG.pitchWidth, bandLength);
+          const mat = new THREE.MeshStandardMaterial({
+            color: i % 2 === 0 ? COLORS.grassA : COLORS.grassB,
+            roughness: 0.82,
+            metalness: 0.02
+          });
+          const band = new THREE.Mesh(geo, mat);
+          band.rotation.x = -Math.PI / 2;
+          band.position.z = -CONFIG.pitchLength / 2 + bandLength / 2 + i * bandLength;
+          band.receiveShadow = true;
+          this.group.add(band);
+        }
+
+        const apron = new THREE.Mesh(
+          new THREE.PlaneGeometry(142, 96),
+          new THREE.MeshStandardMaterial({ color: 0x1e5e3e, roughness: 0.9 })
+        );
+        apron.rotation.x = -Math.PI / 2;
+        apron.position.y = -0.03;
+        apron.receiveShadow = true;
+        this.group.add(apron);
+      }
+
+      createLine(width, length, x, z, rot = 0) {
+        const geo = new THREE.PlaneGeometry(width, length);
+        const mat = new THREE.MeshBasicMaterial({ color: COLORS.white, transparent: true, opacity: 0.88, side: THREE.DoubleSide });
+        const line = new THREE.Mesh(geo, mat);
+        line.rotation.x = -Math.PI / 2;
+        line.rotation.z = rot;
+        line.position.set(x, 0.018, z);
+        this.group.add(line);
+        return line;
+      }
+
+      createLines() {
+        const w = CONFIG.pitchWidth;
+        const l = CONFIG.pitchLength;
+        const thick = 0.18;
+        this.createLine(w, thick, 0, -l / 2);
+        this.createLine(w, thick, 0, l / 2);
+        this.createLine(thick, l, -w / 2, 0);
+        this.createLine(thick, l, w / 2, 0);
+        this.createLine(w, thick, 0, 0);
+
+        const center = new THREE.Mesh(
+          new THREE.RingGeometry(9.15, 9.33, 96),
+          new THREE.MeshBasicMaterial({ color: COLORS.white, transparent: true, opacity: 0.88, side: THREE.DoubleSide })
+        );
+        center.rotation.x = -Math.PI / 2;
+        center.position.y = 0.02;
+        this.group.add(center);
+
+        const spot = new THREE.Mesh(
+          new THREE.CircleGeometry(0.32, 24),
+          new THREE.MeshBasicMaterial({ color: COLORS.white, transparent: true, opacity: 0.95, side: THREE.DoubleSide })
+        );
+        spot.rotation.x = -Math.PI / 2;
+        spot.position.y = 0.025;
+        this.group.add(spot);
+
+        this.createPenaltyBox(-1);
+        this.createPenaltyBox(1);
+      }
+
+      createPenaltyBox(side) {
+        const zGoal = side * CONFIG.pitchLength / 2;
+        const zInner = zGoal - side * CONFIG.penaltyDepth;
+        const boxW = CONFIG.penaltyWidth;
+        const goalW = CONFIG.goalWidth;
+        const sixDepth = 5.5;
+        const sixW = 18.32;
+        const thick = 0.18;
+
+        this.createLine(boxW, thick, 0, zInner);
+        this.createLine(thick, CONFIG.penaltyDepth, -boxW / 2, (zGoal + zInner) / 2);
+        this.createLine(thick, CONFIG.penaltyDepth, boxW / 2, (zGoal + zInner) / 2);
+        this.createLine(goalW, thick, 0, zGoal - side * 11);
+
+        const sixInner = zGoal - side * sixDepth;
+        this.createLine(sixW, thick, 0, sixInner);
+        this.createLine(thick, sixDepth, -sixW / 2, (zGoal + sixInner) / 2);
+        this.createLine(thick, sixDepth, sixW / 2, (zGoal + sixInner) / 2);
+
+        const arc = new THREE.Mesh(
+          new THREE.RingGeometry(9.15, 9.33, 64, 1, side > 0 ? Math.PI * 0.2 : Math.PI * 1.2, Math.PI * 0.6),
+          new THREE.MeshBasicMaterial({ color: COLORS.white, transparent: true, opacity: 0.86, side: THREE.DoubleSide })
+        );
+        arc.rotation.x = -Math.PI / 2;
+        arc.position.set(0, 0.024, zGoal - side * 11);
+        this.group.add(arc);
+      }
+
+      createGoals() {
+        const postMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.32, metalness: 0.06 });
+        const netMat = new THREE.MeshBasicMaterial({ color: 0xf8fafc, transparent: true, opacity: 0.2, wireframe: true });
+
+        [-1, 1].forEach(side => {
+          const z = side * (CONFIG.pitchLength / 2 + CONFIG.goalDepth / 2);
+          const group = new THREE.Group();
+          group.position.z = z;
+
+          const barGeo = new THREE.BoxGeometry(0.34, 0.34, CONFIG.goalDepth);
+          const crossGeo = new THREE.BoxGeometry(CONFIG.goalWidth + 0.34, 0.34, 0.34);
+          const postA = new THREE.Mesh(barGeo, postMat);
+          const postB = new THREE.Mesh(barGeo, postMat);
+          postA.position.set(-CONFIG.goalWidth / 2, 2.25, 0);
+          postB.position.set(CONFIG.goalWidth / 2, 2.25, 0);
+          postA.castShadow = postB.castShadow = true;
+          group.add(postA, postB);
+
+          const cross = new THREE.Mesh(crossGeo, postMat);
+          cross.position.set(0, 4.5, side * CONFIG.goalDepth / 2);
+          cross.castShadow = true;
+          group.add(cross);
+
+          const back = new THREE.Mesh(crossGeo, postMat);
+          back.position.set(0, 0.25, -side * CONFIG.goalDepth / 2);
+          group.add(back);
+
+          const net = new THREE.Mesh(new THREE.BoxGeometry(CONFIG.goalWidth, 4.2, CONFIG.goalDepth), netMat);
+          net.position.y = 2.2;
+          group.add(net);
+          this.group.add(group);
+        });
+      }
+
+      createSurroundings() {
+        this.createTorii(-48, -62);
+        this.createPagoda(48, -65);
+        this.createPond(-52, 55);
+        this.createGarden(50, 54);
+        this.createLanterns();
+      }
+
+      createTorii(x, z) {
+        const red = new THREE.MeshStandardMaterial({ color: 0xb91c1c, roughness: 0.47 });
+        const dark = new THREE.MeshStandardMaterial({ color: 0x3f1519, roughness: 0.62 });
+        const group = new THREE.Group();
+        group.position.set(x, 0, z);
+        const postGeo = new THREE.BoxGeometry(1.4, 8, 1.4);
+        const left = new THREE.Mesh(postGeo, red);
+        const right = new THREE.Mesh(postGeo, red);
+        left.position.set(-4.5, 4, 0);
+        right.position.set(4.5, 4, 0);
+        const top = new THREE.Mesh(new THREE.BoxGeometry(12, 1.25, 1.7), red);
+        top.position.set(0, 8.4, 0);
+        const cap = new THREE.Mesh(new THREE.BoxGeometry(14, 0.9, 2.1), dark);
+        cap.position.set(0, 9.35, 0);
+        const mid = new THREE.Mesh(new THREE.BoxGeometry(9.5, 0.9, 1.45), red);
+        mid.position.set(0, 6.35, 0);
+        [left, right, top, cap, mid].forEach(mesh => {
+          mesh.castShadow = true;
+          group.add(mesh);
+        });
+        this.group.add(group);
+      }
+
+      createPagoda(x, z) {
+        const wood = new THREE.MeshStandardMaterial({ color: COLORS.darkWood, roughness: 0.58 });
+        const roof = new THREE.MeshStandardMaterial({ color: 0x223047, roughness: 0.5 });
+        const group = new THREE.Group();
+        group.position.set(x, 0, z);
+        for (let i = 0; i < 4; i++) {
+          const y = 1.2 + i * 2.2;
+          const scale = 1 - i * 0.12;
+          const level = new THREE.Mesh(new THREE.BoxGeometry(7 * scale, 1.5, 7 * scale), wood);
+          level.position.y = y;
+          const roofMesh = new THREE.Mesh(new THREE.ConeGeometry(5.2 * scale, 1.35, 4), roof);
+          roofMesh.position.y = y + 1.15;
+          roofMesh.rotation.y = Math.PI / 4;
+          level.castShadow = roofMesh.castShadow = true;
+          group.add(level, roofMesh);
+        }
+        this.group.add(group);
+      }
+
+      createPond(x, z) {
+        const water = new THREE.Mesh(
+          new THREE.CircleGeometry(8, 48),
+          new THREE.MeshStandardMaterial({ color: COLORS.water, roughness: 0.18, metalness: 0.12, transparent: true, opacity: 0.78 })
+        );
+        water.rotation.x = -Math.PI / 2;
+        water.position.set(x, 0.035, z);
+        this.group.add(water);
+
+        const lotusMat = new THREE.MeshStandardMaterial({ color: 0xff8fc4, roughness: 0.5 });
+        for (let i = 0; i < 8; i++) {
+          const lotus = new THREE.Mesh(new THREE.ConeGeometry(0.55, 0.28, 8), lotusMat);
+          lotus.position.set(x + rnd(-5.5, 5.5), 0.25, z + rnd(-5, 5));
+          lotus.rotation.x = Math.PI;
+          lotus.castShadow = true;
+          this.group.add(lotus);
+        }
+      }
+
+      createGarden(x, z) {
+        for (let i = 0; i < 14; i++) {
+          this.createSakuraTree(x + rnd(-16, 14), z + rnd(-10, 12), rnd(0.75, 1.25));
+        }
+      }
+
+      createSakuraTree(x, z, scale = 1) {
+        const trunk = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.32 * scale, 0.45 * scale, 4.3 * scale, 8),
+          new THREE.MeshStandardMaterial({ color: 0x7c3f24, roughness: 0.78 })
+        );
+        trunk.position.set(x, 2.15 * scale, z);
+        trunk.castShadow = true;
+        this.group.add(trunk);
+
+        const blossomMat = new THREE.MeshStandardMaterial({ color: COLORS.sakura, roughness: 0.68 });
+        for (let i = 0; i < 5; i++) {
+          const crown = new THREE.Mesh(new THREE.SphereGeometry(rnd(1.05, 1.55) * scale, 14, 10), blossomMat);
+          crown.position.set(x + rnd(-1.4, 1.4) * scale, rnd(4.1, 5.8) * scale, z + rnd(-1.2, 1.3) * scale);
+          crown.castShadow = true;
+          this.group.add(crown);
+        }
+      }
+
+      createLanterns() {
+        const stone = new THREE.MeshStandardMaterial({ color: COLORS.stone, roughness: 0.72 });
+        const glow = new THREE.MeshStandardMaterial({ color: 0xfff0aa, roughness: 0.25, emissive: 0xffd66e, emissiveIntensity: 0.5 });
+        const spots = [
+          [-42, -42], [42, -42], [-42, 42], [42, 42],
+          [-38, 0], [38, 0]
+        ];
+        spots.forEach(([x, z]) => {
+          const group = new THREE.Group();
+          group.position.set(x, 0, z);
+          const base = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.45, 1.6), stone);
+          base.position.y = 0.22;
+          const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.25, 1.5, 8), stone);
+          stem.position.y = 1.15;
+          const lamp = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.9, 1.1), glow);
+          lamp.position.y = 2.15;
+          const roof = new THREE.Mesh(new THREE.ConeGeometry(0.9, 0.55, 4), stone);
+          roof.rotation.y = Math.PI / 4;
+          roof.position.y = 2.88;
+          [base, stem, lamp, roof].forEach(mesh => {
+            mesh.castShadow = true;
+            group.add(mesh);
+          });
+          this.group.add(group);
+        });
+      }
+    }
+
+    class Teams {
+      constructor(scene) {
+        this.players = [];
+        this.home = [];
+        this.away = [];
+        this.scene = scene;
+        this.createTeam('home');
+        this.createTeam('away');
+      }
+
+      createTeam(team) {
+        const side = team === 'home' ? 1 : -1;
+        const roster = [
+          ['GK', 0, 49],
+          ['CB', -8, 34], ['CB', 8, 34],
+          ['LB', -24, 27], ['RB', 24, 27],
+          ['CM', -9, 11], ['CM', 9, 11], ['DM', 0, 21],
+          ['LW', -22, -5], ['ST', 0, -15], ['RW', 22, -5]
+        ];
+        roster.forEach((item, i) => {
+          const [role, x, z] = item;
+          const player = new Player(this.scene, team, i + 1, role, x, z * side);
+          this.players.push(player);
+          this[team].push(player);
+        });
+      }
+
+      reset() {
+        this.players.forEach(player => {
+          player.mesh.position.copy(player.base);
+          player.forward.set(0, 0, player.home ? -1 : 1);
+          player.setHasBall(false);
+        });
+      }
+
+      nearestToBall(team, ball, exclude = null) {
+        const squad = team ? this[team] : this.players;
+        let best = null;
+        let bestDist = Infinity;
+        squad.forEach(player => {
+          if (player === exclude) return;
+          const dist = flatDistance(player.mesh.position, ball.mesh.position);
+          if (dist < bestDist) {
+            best = player;
+            bestDist = dist;
+          }
+        });
+        return { player: best, dist: bestDist };
+      }
+
+      nearestAhead(fromPlayer) {
+        const squad = this[fromPlayer.team];
+        const attackSign = fromPlayer.home ? -1 : 1;
+        let best = null;
+        let bestScore = -Infinity;
+        squad.forEach(player => {
+          if (player === fromPlayer) return;
+          const dz = (player.mesh.position.z - fromPlayer.mesh.position.z) * attackSign;
+          const dist = flatDistance(player.mesh.position, fromPlayer.mesh.position);
+          const score = dz * 1.6 - Math.abs(player.mesh.position.x - fromPlayer.mesh.position.x) * 0.42 - dist * 0.12;
+          if (score > bestScore) {
+            best = player;
+            bestScore = score;
+          }
+        });
+        return best || squad.find(p => p !== fromPlayer);
+      }
+    }
+
+    class Game {
+      constructor() {
+        this.scene = new THREE.Scene();
+        this.scene.background = new THREE.Color(0x93c5fd);
+        this.scene.fog = new THREE.Fog(0x93c5fd, 112, 230);
+
+        this.renderer = new THREE.WebGLRenderer({ canvas: dom.canvas, antialias: true });
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        this.renderer.setSize(window.innerWidth, window.innerHeight);
+        this.renderer.shadowMap.enabled = true;
+        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+        this.camera = new THREE.PerspectiveCamera(54, window.innerWidth / window.innerHeight, 0.1, 500);
+        this.camera.position.set(0, 44, 55);
+
+        this.clock = new THREE.Clock();
+        this.input = new Input();
+        this.pitch = new Pitch(this.scene);
+        this.teams = new Teams(this.scene);
+        this.ball = new Ball(this.scene);
+
+        this.homeScore = 0;
+        this.awayScore = 0;
+        this.timeLeft = CONFIG.matchSeconds;
+        this.selectedIndex = 9;
+        this.selected = this.teams.home[this.selectedIndex];
+        this.selected.setControlled(true);
+        this.shotCharge = 0;
+        this.phase = 'Kickoff';
+        this.paused = false;
+        this.goalPause = 0;
+
+        this.setupLights();
+        this.resetKickoff();
+        this.bindResize();
+        requestAnimationFrame(() => this.loop());
+      }
+
+      setupLights() {
+        const hemi = new THREE.HemisphereLight(0xdbeafe, 0x245337, 1.28);
+        this.scene.add(hemi);
+
+        const sun = new THREE.DirectionalLight(0xffffff, 2.35);
+        sun.position.set(-35, 78, 28);
+        sun.castShadow = true;
+        sun.shadow.mapSize.set(2048, 2048);
+        sun.shadow.camera.left = -86;
+        sun.shadow.camera.right = 86;
+        sun.shadow.camera.top = 86;
+        sun.shadow.camera.bottom = -86;
+        sun.shadow.camera.near = 1;
+        sun.shadow.camera.far = 170;
+        this.scene.add(sun);
+      }
+
+      bindResize() {
+        window.addEventListener('resize', () => {
+          this.camera.aspect = window.innerWidth / window.innerHeight;
+          this.camera.updateProjectionMatrix();
+          this.renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+      }
+
+      resetKickoff(scoringTeam = null) {
+        this.teams.reset();
+        this.ball.reset();
+        this.teams.players.forEach(player => player.setHasBall(false));
+        this.selected.setControlled(false);
+        this.selectedIndex = 9;
+        this.selected = this.teams.home[this.selectedIndex];
+        this.selected.setControlled(true);
+        this.ball.owner = this.selected;
+        this.selected.setHasBall(true);
+        this.phase = scoringTeam ? `${scoringTeam === 'home' ? 'Home' : 'Away'} scored` : 'Kickoff';
+        this.goalPause = scoringTeam ? 1.6 : 0;
+        this.updateHud();
+      }
+
+      switchPlayer() {
+        const { player } = this.teams.nearestToBall('home', this.ball, this.selected);
+        if (!player) return;
+        this.selected.setControlled(false);
+        this.selected = player;
+        this.selectedIndex = this.teams.home.indexOf(player);
+        this.selected.setControlled(true);
+      }
+
+      loop() {
+        const rawDelta = this.clock.getDelta();
+        const delta = Math.min(rawDelta, 1 / 30);
+        this.input.beginFrame();
+        this.update(delta);
+        this.render();
+        this.input.endFrame();
+        requestAnimationFrame(() => this.loop());
+      }
+
+      update(delta) {
+        if (this.input.actions.pause) {
+          this.paused = !this.paused;
+        }
+
+        if (this.input.actions.restart) this.resetKickoff();
+
+        if (this.paused) {
+          this.shotCharge = 0;
+          this.updateHud();
+          return;
+        }
+
+        if (this.timeLeft > 0 && this.goalPause <= 0) {
+          this.timeLeft -= delta;
+        }
+
+        if (this.goalPause > 0) {
+          this.goalPause -= delta;
+          this.updateCamera(delta);
+          this.updateHud();
+          return;
+        }
+
+        if (this.timeLeft <= 0) {
+          this.phase = 'Full time';
+          this.ball.owner = null;
+          this.ball.velocity.multiplyScalar(0.96);
+          this.ball.update(delta);
+          this.updateCamera(delta);
+          this.updateHud();
+          return;
+        }
+
+        if (this.input.actions.switch) this.switchPlayer();
+        this.handlePlayerInput(delta);
+        this.updateAI(delta);
+        this.updateSupportRuns(delta);
+        this.resolvePlayerSpacing();
+        this.resolveTackles(delta);
+        this.ball.update(delta);
+        this.resolveBallOwnership();
+        this.resolveBoundsAndGoals();
+        this.teams.players.forEach(player => player.updateAnimation(performance.now() * 0.001));
+        this.updateCamera(delta);
+        this.updateHud();
+      }
+
+      handlePlayerInput(delta) {
+        this.selected.applyManual(this.input, delta);
+        if (this.ball.owner === this.selected) {
+          this.phase = 'In possession';
+          if (this.input.actions.pass) this.pass(false);
+          if (this.input.actions.through) this.pass(true);
+          if (this.input.actions.shootDown) this.shotCharge = 0.08;
+          if (this.input.shootHeld) this.shotCharge = clamp(this.shotCharge + delta * 0.82, 0, 1);
+          if (this.input.actions.shootUp && this.shotCharge > 0) {
+            this.shoot(this.selected, this.shotCharge);
+            this.shotCharge = 0;
+          }
+        } else {
+          if (!this.input.shootHeld) this.shotCharge = 0;
+          if (!this.ball.owner && this.canClaimBall(this.selected) && flatDistance(this.selected.mesh.position, this.ball.mesh.position) < 2.0) {
+            this.claimBall(this.selected);
+          }
+        }
+      }
+
+      pass(through) {
+        const receiver = through ? this.teams.nearestAhead(this.selected) : this.findBestPassTarget(this.selected);
+        if (!receiver) return;
+        const direction = flatDirection(this.ball.mesh.position, receiver.mesh.position);
+        const lead = receiver.forward.clone().multiplyScalar(through ? 7.5 : 1.5);
+        const aim = receiver.mesh.position.clone().add(lead);
+        const aimDirection = flatDirection(this.ball.mesh.position, aim);
+        this.selected.setHasBall(false);
+        this.ball.kick(through ? aimDirection : direction, through ? CONFIG.throughPower : CONFIG.passPower, through ? 0.7 : 0.25, this.selected, 0.62, receiver);
+        this.phase = through ? 'Through ball' : 'Pass';
+      }
+
+      findBestPassTarget(fromPlayer) {
+        const squad = this.teams[fromPlayer.team];
+        let best = null;
+        let bestScore = -Infinity;
+        squad.forEach(player => {
+          if (player === fromPlayer) return;
+          const dist = flatDistance(fromPlayer.mesh.position, player.mesh.position);
+          const forwardGain = (fromPlayer.home ? fromPlayer.mesh.position.z - player.mesh.position.z : player.mesh.position.z - fromPlayer.mesh.position.z);
+          const central = -Math.abs(player.mesh.position.x) * 0.08;
+          const score = forwardGain * 0.7 + central - Math.abs(dist - 18) * 0.25;
+          if (score > bestScore) {
+            best = player;
+            bestScore = score;
+          }
+        });
+        return best;
+      }
+
+      shoot(player, charge) {
+        const targetZ = player.home ? -CONFIG.pitchLength / 2 - 2 : CONFIG.pitchLength / 2 + 2;
+        const target = new THREE.Vector3(rnd(-CONFIG.goalWidth * 0.4, CONFIG.goalWidth * 0.4), 0, targetZ);
+        const direction = flatDirection(this.ball.mesh.position, target);
+        const power = lerp(CONFIG.shotMin, CONFIG.shotMax, charge);
+        player.setHasBall(false);
+        this.ball.kick(direction, power, lerp(1.4, 5.2, charge), player, 0.3, null);
+        this.phase = 'Shot';
+      }
+
+      updateAI(delta) {
+        const awayPossession = this.ball.owner?.team === 'away';
+        const homePossession = this.ball.owner?.team === 'home';
+        const nearestAway = this.teams.nearestToBall('away', this.ball).player;
+        this.teams.away.forEach(player => {
+          if (this.ball.owner === player) {
+            this.aiWithBall(player, delta);
+            return;
+          }
+
+          if (!awayPossession && player === nearestAway) {
+            let chaseTarget = this.ball.mesh.position;
+            let stopDistance = 0.05;
+            if (this.ball.owner) {
+              const distanceToOwner = flatDistance(player.mesh.position, this.ball.owner.mesh.position);
+              if (distanceToOwner < 6) {
+                chaseTarget = this.ball.owner.mesh.position;
+                stopDistance = CONFIG.playerRadius * 1.75;
+              } else {
+                const markerSide = player.number % 2 === 0 ? 1 : -1;
+                chaseTarget = this.ball.owner.mesh.position.clone().add(new THREE.Vector3(markerSide * CONFIG.playerRadius * 1.7, 0, 0));
+                stopDistance = 0.05;
+              }
+            }
+            player.moveTowards(chaseTarget, CONFIG.aiSpeed * 1.1, delta, 1, stopDistance);
+            return;
+          }
+
+          const pressure = homePossession ? 1.18 : 0.72;
+          const homeBallZ = this.ball.mesh.position.z;
+          const shifted = player.base.clone();
+          shifted.z += clamp(homeBallZ * 0.24, -12, 12);
+          shifted.x += clamp(this.ball.mesh.position.x * 0.10, -5, 5);
+          player.moveTowards(shifted, CONFIG.aiSpeed, delta, pressure);
+        });
+      }
+
+      aiWithBall(player, delta) {
+        const goal = new THREE.Vector3(0, 0, CONFIG.pitchLength / 2 + 4);
+        const distToGoal = flatDistance(player.mesh.position, goal);
+        player.cooldown -= delta;
+        if (distToGoal < 30 && player.cooldown <= 0) {
+          this.shoot(player, rnd(0.42, 0.86));
+          player.cooldown = 1.2;
+          return;
+        }
+        if (player.cooldown <= 0 && Math.random() < 0.02) {
+          const receiver = Math.random() < 0.55 ? this.teams.nearestAhead(player) : this.findBestPassTarget(player);
+          if (receiver) {
+            const direction = flatDirection(this.ball.mesh.position, receiver.mesh.position);
+            player.setHasBall(false);
+            this.ball.kick(direction, Math.random() < 0.5 ? CONFIG.passPower : CONFIG.throughPower, 0.35, player, 0.62, receiver);
+            player.cooldown = rnd(0.8, 1.4);
+            this.phase = 'Away pass';
+            return;
+          }
+        }
+        const lane = goal.clone();
+        lane.x = clamp(player.mesh.position.x * 0.82 + rnd(-1, 1), -12, 12);
+        player.moveTowards(lane, CONFIG.aiSpeed, delta, 1.15);
+      }
+
+      updateSupportRuns(delta) {
+        const ballOwner = this.ball.owner;
+        this.teams.home.forEach(player => {
+          if (player === this.selected) return;
+          if (ballOwner?.team === 'home') {
+            const run = player.base.clone();
+            run.z -= 8;
+            run.x += clamp(ballOwner.mesh.position.x * 0.12, -4, 4);
+            player.moveTowards(run, CONFIG.normalSpeed * 0.68, delta);
+          } else {
+            const pressers = ballOwner?.team === 'away' ? this.getZonePressers('home', ballOwner, 2) : [];
+            if (pressers.includes(player)) {
+              const lane = ballOwner.mesh.position.clone();
+              lane.x += player.number % 2 === 0 ? CONFIG.playerRadius * 1.15 : -CONFIG.playerRadius * 1.15;
+              player.moveTowards(lane, CONFIG.normalSpeed * 0.9, delta);
+            } else {
+              const shifted = player.base.clone();
+              shifted.z += clamp(this.ball.mesh.position.z * 0.12, -7, 7);
+              shifted.x += clamp(this.ball.mesh.position.x * 0.06, -3, 3);
+              player.moveTowards(shifted, CONFIG.normalSpeed * 0.55, delta);
+            }
+          }
+        });
+      }
+
+      getZonePressers(team, owner, limit = 2) {
+        return this.teams[team]
+          .filter(player => player !== this.selected && player.role !== 'GK')
+          .map(player => {
+            const liveDist = flatDistance(player.mesh.position, owner.mesh.position);
+            const zoneDist = flatDistance(player.base, owner.mesh.position);
+            const sameLane = Math.abs(player.base.x - owner.mesh.position.x) < 18 ? -4 : 0;
+            return { player, score: liveDist + zoneDist * 0.45 + sameLane };
+          })
+          .filter(item => item.score < 38)
+          .sort((a, b) => a.score - b.score)
+          .slice(0, limit)
+          .map(item => item.player);
+      }
+
+      resolveBallOwnership() {
+        if (this.ball.owner) return;
+        const speed = Math.hypot(this.ball.velocity.x, this.ball.velocity.z);
+        let candidate = null;
+        let bestDist = Infinity;
+        this.teams.players.forEach(player => {
+          const dist = flatDistance(player.mesh.position, this.ball.mesh.position);
+          if (this.canClaimBall(player) && dist < CONFIG.playerRadius + 0.72 && dist < bestDist) {
+            candidate = player;
+            bestDist = dist;
+          }
+        });
+        if (candidate && speed < 36) {
+          this.claimBall(candidate);
+        }
+      }
+
+      canClaimBall(player) {
+        if (this.ball.pickupCooldown <= 0) return true;
+        if (this.ball.intendedReceiver) return player === this.ball.intendedReceiver;
+        return this.ball.lastKicker !== player;
+      }
+
+      resolveTackles(delta) {
+        const owner = this.ball.owner;
+        if (!owner) return;
+
+        this.teams.players.forEach(player => {
+          player.tackleCooldown = Math.max(0, player.tackleCooldown - delta);
+        });
+
+        let defender = null;
+        let bestDist = Infinity;
+        const defendingTeam = owner.team === 'home' ? 'away' : 'home';
+        const candidates = owner.team === 'home'
+          ? this.teams.away
+          : this.getZonePressers('home', owner, 2).concat(this.selected);
+
+        candidates.forEach(player => {
+          if (!player || player === owner) return;
+          const dist = flatDistance(player.mesh.position, owner.mesh.position);
+          if (dist < bestDist) {
+            defender = player;
+            bestDist = dist;
+          }
+        });
+        if (!defender || defender.tackleCooldown > 0 || bestDist > CONFIG.tackleDistance) return;
+
+        defender.tackleCooldown = CONFIG.tackleCooldown;
+        const ownerMoving = owner.team === 'home' ? Math.hypot(this.input.move.x, this.input.move.y) : 0.35;
+        const successChance = ownerMoving > 0.1 ? 0.55 : 0.78;
+        if (Math.random() < successChance) {
+          this.claimBall(defender, owner, 0.5);
+          this.phase = defendingTeam === 'home' ? 'Home tackle' : 'Away tackle';
+          return;
+        }
+
+        const looseDir = flatDirection(defender.mesh.position, owner.mesh.position);
+        owner.setHasBall(false);
+        this.ball.kick(looseDir, 12, 0.2, owner, 0.18, null);
+        this.phase = 'Tackle deflected';
+      }
+
+      resolvePlayerSpacing() {
+        const minDist = CONFIG.playerRadius * 2.08;
+        const halfW = CONFIG.pitchWidth / 2 - 1;
+        const halfL = CONFIG.pitchLength / 2 - 1;
+
+        for (let i = 0; i < this.teams.players.length; i++) {
+          for (let j = i + 1; j < this.teams.players.length; j++) {
+            const a = this.teams.players[i];
+            const b = this.teams.players[j];
+            const dx = b.mesh.position.x - a.mesh.position.x;
+            const dz = b.mesh.position.z - a.mesh.position.z;
+            const dist = Math.hypot(dx, dz);
+            if (dist >= minDist) continue;
+
+            const nx = dist > 0.001 ? dx / dist : Math.cos(i + j);
+            const nz = dist > 0.001 ? dz / dist : Math.sin(i + j);
+            const push = (minDist - dist) * 0.52;
+            const aLocked = a === this.ball.owner;
+            const bLocked = b === this.ball.owner;
+
+            if (!aLocked) {
+              a.mesh.position.x -= nx * (bLocked ? push * 1.6 : push);
+              a.mesh.position.z -= nz * (bLocked ? push * 1.6 : push);
+            }
+            if (!bLocked) {
+              b.mesh.position.x += nx * (aLocked ? push * 1.6 : push);
+              b.mesh.position.z += nz * (aLocked ? push * 1.6 : push);
+            }
+
+            a.mesh.position.x = clamp(a.mesh.position.x, -halfW, halfW);
+            a.mesh.position.z = clamp(a.mesh.position.z, -halfL, halfL);
+            b.mesh.position.x = clamp(b.mesh.position.x, -halfW, halfW);
+            b.mesh.position.z = clamp(b.mesh.position.z, -halfL, halfL);
+          }
+        }
+      }
+
+      claimBall(player, blockedPlayer = null, pickupCooldown = 0) {
+        if (this.ball.owner) this.ball.owner.setHasBall(false);
+        this.ball.owner = player;
+        this.ball.lastKicker = blockedPlayer;
+        this.ball.intendedReceiver = null;
+        this.ball.pickupCooldown = pickupCooldown;
+        player.setHasBall(true);
+        if (player.team === 'home' && player !== this.selected) {
+          this.selected.setControlled(false);
+          this.selected = player;
+          this.selectedIndex = this.teams.home.indexOf(player);
+          this.selected.setControlled(true);
+        }
+        this.phase = player.team === 'home' ? 'In possession' : 'Defending';
+      }
+
+      resolveBoundsAndGoals() {
+        const pos = this.ball.mesh.position;
+        const inGoalMouth = Math.abs(pos.x) <= CONFIG.goalWidth / 2;
+        if (pos.z < -CONFIG.pitchLength / 2 && inGoalMouth) {
+          this.homeScore += 1;
+          this.showGoal('Home goal');
+          this.resetKickoff('home');
+          return;
+        }
+        if (pos.z > CONFIG.pitchLength / 2 && inGoalMouth) {
+          this.awayScore += 1;
+          this.showGoal('Away goal');
+          this.resetKickoff('away');
+          return;
+        }
+
+        const halfW = CONFIG.pitchWidth / 2;
+        const halfL = CONFIG.pitchLength / 2;
+        if (Math.abs(pos.x) > halfW) {
+          pos.x = clamp(pos.x, -halfW, halfW);
+          this.ball.velocity.x *= -0.48;
+        }
+        if (Math.abs(pos.z) > halfL + CONFIG.goalDepth + 1) {
+          pos.z = clamp(pos.z, -halfL - CONFIG.goalDepth - 1, halfL + CONFIG.goalDepth + 1);
+          this.ball.velocity.z *= -0.42;
+        }
+      }
+
+      showGoal(text) {
+        dom.toast.textContent = text;
+        dom.toast.classList.remove('show');
+        void dom.toast.offsetWidth;
+        dom.toast.classList.add('show');
+      }
+
+      updateCamera(delta) {
+        const target = this.selected?.mesh.position || this.ball.mesh.position;
+        const ball = this.ball.mesh.position;
+        const focus = new THREE.Vector3(
+          lerp(target.x, ball.x, 0.35),
+          0,
+          lerp(target.z, ball.z, 0.35)
+        );
+        const desired = new THREE.Vector3(
+          clamp(focus.x * 0.28, -16, 16),
+          43,
+          focus.z + 43
+        );
+        this.camera.position.lerp(desired, clamp(delta * 3.2, 0, 1));
+        this.camera.lookAt(focus.x, 0, focus.z - 10);
+      }
+
+      updateHud() {
+        dom.phase.textContent = this.paused ? 'Paused' : this.phase;
+        const owner = this.ball.owner ? `${this.ball.owner.team === 'home' ? 'Home' : 'Away'} ${this.ball.owner.number}` : 'Loose ball';
+        dom.playerStatus.textContent = this.paused ? `Press P to resume · Selected: Home ${this.selected.number} · Ball: ${owner}` : `Selected: Home ${this.selected.number} · Ball: ${owner}`;
+        dom.homeScore.textContent = this.homeScore;
+        dom.awayScore.textContent = this.awayScore;
+        dom.timer.textContent = formatTime(this.timeLeft);
+        const pct = Math.round(this.shotCharge * 100);
+        dom.powerFill.style.width = `${pct}%`;
+        dom.powerText.textContent = `${pct}%`;
+      }
+
+      render() {
+        this.renderer.render(this.scene, this.camera);
+      }
+    }
+
+    new Game();
+  </script>
+</body>
+</html>
